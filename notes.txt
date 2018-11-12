@@ -1,0 +1,33 @@
+Как это должно выглядеть?
+
+* или это вариант мавена который собирает и стартует два докер-контейнера, причём во второй суёт два приложения (реальное и тестовое), а потом гоняет тесты через рест-апи или же запускает тестовую цепочку из тест-приложения (то же самое, что может сделать "тестировщик" ручками)
+
+* второй вариант -- просто проапдейтить имеющийся имадж через докер-файл, а сами имаджи запускать уже руками. и тестить руками. этот вариант хуже выглядит, но более реален к реализации
+
+в любом случае надо проверить что из одного контейнера веб-приложение может стартануть игнайт-клиента и достучаться до игнайт-сервера из другого контейнера при условии что оба контейнера в одной сети работают
+
+
+
+1) разбираться с https://docs.docker.com/compose/compose-file/
+	два имаджа -- ignite и app
+	собираем в отдельной сети
+	от app экспозим
+		порт 8080 (ну или какой там будет http-порт на wildfly)
+		http://localhost:9990/console/index.html -- консолька
+	см также
+		https://stackoverflow.com/questions/51767482/questions-about-setting-up-apache-ignite-in-docker-compose
+		
+2) подумать над коннектом к хосту. может и не нужно
+	https://stackoverflow.com/questions/24319662/from-inside-of-a-docker-container-how-do-i-connect-to-the-localhost-of-the-mach
+
+3) Проверить как плагины с docker-compose работают
+	https://codefresh.io/howtos/using-docker-maven-maven-docker/
+
+4) как деплоить приложение из мавена
+	https://github.com/goldmann/wildfly-docker-deployment-example
+
+5) интересно про энтрипоинт -- надо научиться пользоваться этой фигнёй чтобы дефолтные параметры в имадж засовывать
+	https://stackoverflow.com/questions/29015023/docker-commit-created-images-and-entrypoint
+
+6) с этого всё началось
+	https://www.atlassian.com/blog/software-teams/deploy-java-apps-with-docker-awesome
