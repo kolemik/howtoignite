@@ -33,7 +33,7 @@
             </bean>
         </property>
         <!-- Enable client mode. -->
-        <property name="clientMode" value="true"/>
+        <property name="clientMode" value="false"/>
         <!-- Explicitly configure TCP discovery SPI to provide a list of initial nodes. -->
         <property name="discoverySpi">
             <bean class="org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi">

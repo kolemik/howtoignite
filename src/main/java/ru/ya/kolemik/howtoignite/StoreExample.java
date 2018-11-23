@@ -1,12 +1,12 @@
 /*
  * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with
+ * contributor license agreements. See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.
  * The ASF licenses this file to You under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance with
- * the License.  You may obtain a copy of the License at
+ * the License. You may obtain a copy of the License at
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -19,6 +19,7 @@ package ru.ya.kolemik.howtoignite;
 
 import java.util.List;
 import org.apache.ignite.Ignite;
+import org.apache.ignite.IgniteAtomicSequence;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteDataStreamer;
 import org.apache.ignite.Ignition;
@@ -27,6 +28,7 @@ import org.apache.ignite.cache.CacheWriteSynchronizationMode;
 import org.apache.ignite.cache.query.QueryCursor;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.configuration.CacheConfiguration;
+import org.apache.ignite.transactions.Transaction;
 
 /**
  * This example demonstrates the usage of Apache Ignite Persistent Store.
@@ -49,16 +51,22 @@ public class StoreExample {
     private static final String ORG_CACHE = "Organizations";
 
     /** */
-    private static final boolean UPDATE = true;
+    private static boolean UPDATE = true;
 
     /**
      * @param args Program arguments, ignored.
      * @throws Exception If failed.
      */
     public static void main(String[] args) throws Exception {
-        Ignition.setClientMode(true);
+        String config;
+        if (args.length == 0) {
+            Ignition.setClientMode(true);
+            config = "persistent-store.xml";
+        } else {
+            config = "persistent-store-server.xml";
+        }
 
-        try (Ignite ignite = Ignition.start("persistent-store.xml")) {
+        try (Ignite ignite = Ignition.start(config)) {
             // Activate the cluster. Required to do if the persistent store is enabled because you might need
             // to wait while all the nodes, that store a subset of data on disk, join the cluster.
             ignite.cluster().active(true);
@@ -71,25 +79,42 @@ public class StoreExample {
             cacheCfg.setIndexedTypes(Long.class, Organization.class);
 
             IgniteCache<Long, Organization> cache = ignite.getOrCreateCache(cacheCfg);
+            try (Transaction tx = ignite.transactions().txStart()) {
+                Long id = 4322l;
+                Organization o = cache.get(id);
+                if (UPDATE = (o == null)) {
+                    tx.rollback();
+                } else {
+                    System.out.println("SLEEP BEFORE\t" + o);
+                    Thread.sleep(10000);
+                    o = new Organization(o.id(), "organization-TX");
+                    cache.put(id, o);
+                    System.out.println("SLEEP AFTER\t" + o);
+                    Thread.sleep(10000);
+                    tx.commit();
+                }
+            }
 
             if (UPDATE) {
                 System.out.println("Populating the cache...");
+                // Initialize atomic sequence.
+                final IgniteAtomicSequence seq = ignite.atomicSequence("orgSeq", 0, true);
 
                 try (IgniteDataStreamer<Long, Organization> streamer = ignite.dataStreamer(ORG_CACHE)) {
                     streamer.allowOverwrite(true);
 
                     for (long i = 0; i < 100_000; i++) {
-                        streamer.addData(i, new Organization(i, "organization-" + i));
+                        long id = seq.incrementAndGet();
+                        streamer.addData(id, new Organization(id, "organization-" + id));
 
                         if (i > 0 && i % 10_000 == 0)
-                            System.out.println("Done: " + i);
+                            System.out.println("Done: " + id);
                     }
                 }
             }
 
             // Run SQL without explicitly calling to loadCache().
-            QueryCursor<List<?>> cur = cache.query(
-                new SqlFieldsQuery("select id, name from Organization where name like ?")
+            QueryCursor<List<?>> cur = cache.query(new SqlFieldsQuery("select id, name from Organization where name like ?")
                     .setArgs("organization-54321"));
 
             System.out.println("SQL Result: " + cur.getAll());
@@ -98,6 +123,14 @@ public class StoreExample {
             Organization org = cache.get(54321l);
 
             System.out.println("GET Result: " + org);
+
+            Organization orgTX = cache.get(4321l);
+
+            System.out.println("GET Result: " + orgTX);
+
+            while (UPDATE) {
+                Thread.sleep(1000);
+            }
         }
     }
 }

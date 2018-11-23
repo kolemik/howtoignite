@@ -1,0 +1,32 @@
+User
+	*id
+	*name
+	*accoutIdIn
+	*accoutIdOut
+
+Account
+	*id
+	*userId
+	*type
+	*currency
+
+Ballance
+	*accountId
+	*lastBallance балланс можно считать по сумме транзакций
+
+Transaction
+	*id
+	*type
+	*accountIdFrom
+	*accountIdTo              сумма которую отправляли
+	*fromAmount == fromFee + (toFee     +     toAmount)
+	*toAmount
+	*fromFee -- комиссия на отправителе
+	*toFee -- комиссия на получателе
+	
+Для перевода блокируется только балланс пользователя по конкретному счёту с которого идёт списание
+
+Обновление счёта получателя идёт не транзакционно
+
+Номер транзакции как?
+
